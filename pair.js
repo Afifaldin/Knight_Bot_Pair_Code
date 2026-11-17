@@ -1,4 +1,5 @@
 import express from 'express';
+import archiver from 'archiver';
 import fs from 'fs';
 import pino from 'pino';
 import { makeWASocket, useMultiFileAuthState, delay, makeCacheableSignalKeyStore, Browsers, jidNormalizedUser, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
@@ -15,7 +16,25 @@ function removeFile(FilePath) {
         console.error('Error removing file:', e);
     }
 }
+function createSessionZip(sessionDir) {
+    return new Promise((resolve, reject) => {
+        const archive = archiver('zip', {
+            zlib: { level: 9 }
+        });
 
+        const chunks = [];
+
+        archive.on('data', chunk => chunks.push(chunk));
+        archive.on('error', reject);
+
+        archive.on('end', () => {
+            resolve(Buffer.concat(chunks));
+        });
+
+        archive.directory(sessionDir, false);
+        archive.finalize();
+    });
+}
 router.get('/', async (req, res) => {
     let num = req.query.number;
     let dirs = './' + (num || `session`);
@@ -68,16 +87,28 @@ router.get('/', async (req, res) => {
                     console.log("📱 Sending session file to user...");
                     
                     try {
-                        const sessionKnight = fs.readFileSync(dirs + '/creds.json');
+                        // Create complete session ZIP
+const sessionZip = await createSessionZip(dirs);
 
-                        // Send session file to user
-                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                        await KnightBot.sendMessage(userJid, {
-                            document: sessionKnight,
-                            mimetype: 'application/json',
-                            fileName: 'creds.json'
-                        });
-                        console.log("📄 Session file sent successfully");
+// Send session ZIP to user
+const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
+
+await KnightBot.sendMessage(userJid, {
+    document: sessionZip,
+    mimetype: 'application/zip',
+    fileName: 'madara-session.zip'
+});
+
+console.log("📦 Complete session ZIP sent successfully!");
+
+                        
+                        
+                        
+                            
+                            
+                            
+                        
+                        
 
                         // Send video thumbnail with caption
                         await KnightBot.sendMessage(userJid, {
@@ -105,8 +136,8 @@ router.get('/', async (req, res) => {
                         // Do not exit the process, just finish gracefully
                     } catch (error) {
                         console.error("❌ Error sending messages:", error);
-                        // Still clean up session even if sending fails
-                        removeFile(dirs);
+                        // Keep session files if sending fails
+                        
                         // Do not exit the process, just finish gracefully
                     }
                 }
