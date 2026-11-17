@@ -97,7 +97,7 @@ router.get('/', async (req, res) => {
     // Prevent duplicate delivery and reconnect attempts
     let deliveryStarted = false;
     let reconnecting = false;
-
+let sessionStarted = false;
     async function initiateSession() {
 
         const { state, saveCreds } =
