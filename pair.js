@@ -36,14 +36,32 @@ function createSessionZip(sessionDir) {
     });
 }
 router.get('/', async (req, res) => {
-    let num = req.query.number;
-    let dirs = './' + (num || `session`);
+    if (!num) {
+  return res.status(400).send({
+    error: 'Phone number is required'
+  });
+}
 
-    // Remove existing session if present
-    await removeFile(dirs);
+num = num.replace(/[^0-9]/g, '');
 
-    // Clean the phone number - remove any non-digit characters
-    num = num.replace(/[^0-9]/g, '');
+const phone = pn('+' + num);
+
+if (!phone.isValid()) {
+  return res.status(400).send({
+    error: 'Invalid phone number'
+  });
+}
+
+num = phone.getNumber('e164').replace('+', '');
+
+const dirs = './' + num + '-' + Date.now();
+    
+
+    
+    
+
+    
+    
 
     // Validate the phone number using awesome-phonenumber
     const phone = pn('+' + num);
